@@ -1,0 +1,225 @@
+### Image Store API - HTTP Client Requests
+
+### 1. Health Check
+GET {{baseUrl}}/api/health
+
+###
+
+### 2. Upload Image (no tags)
+POST {{baseUrl}}/api/images
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test-image.jpg"
+Content-Type: image/jpeg
+
+< {{testImagePath}}
+--WebAppBoundary--
+
+> {%
+    client.test("Upload successful", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+    });
+    client.global.set("uploadedImageId", response.body.id);
+%}
+
+###
+
+### 3. Upload Image with Tags
+POST {{baseUrl}}/api/images
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="landscape.jpg"
+Content-Type: image/jpeg
+
+< {{testImagePath}}
+--WebAppBoundary
+Content-Disposition: form-data; name="tags"
+
+nature
+--WebAppBoundary
+Content-Disposition: form-data; name="tags"
+
+landscape
+--WebAppBoundary
+Content-Disposition: form-data; name="tags"
+
+sunset
+--WebAppBoundary--
+
+> {%
+    client.test("Upload with tags successful", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+        client.assert(response.body.tags.length === 3, "Should have 3 tags");
+    });
+    client.global.set("taggedImageId", response.body.id);
+%}
+
+###
+
+### 4. Get Image by ID
+GET {{baseUrl}}/api/images/{{imageId}}
+Accept: image/*
+
+> {%
+    client.test("Image retrieved", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.headers.valueOf("ETag") !== null, "ETag header missing");
+        client.assert(response.headers.valueOf("Cache-Control") !== null, "Cache-Control header missing");
+    });
+%}
+
+###
+
+### 5. Get Image with ETag (should return 304)
+GET {{baseUrl}}/api/images/{{imageId}}
+Accept: image/*
+If-None-Match: "d41d8cd98f00b204e9800998ecf8427e"
+
+###
+
+### 6. Get Image Metadata
+GET {{baseUrl}}/api/images/{{imageId}}/metadata
+
+> {%
+    client.test("Metadata retrieved", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.id !== undefined, "ID missing");
+        client.assert(response.body.filename !== undefined, "Filename missing");
+    });
+%}
+
+###
+
+### 7. Search Images - Required Tags
+GET {{baseUrl}}/api/images/search?required=nature,landscape
+
+> {%
+    client.test("Search successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(Array.isArray(response.body), "Response should be an array");
+    });
+%}
+
+###
+
+### 8. Search Images - Optional Tags
+GET {{baseUrl}}/api/images/search?optional=nature,landscape,sunset
+
+###
+
+### 9. Search Images - Required and Optional Tags
+GET {{baseUrl}}/api/images/search?required=nature&optional=sunset,mountains
+
+###
+
+### 10. Search Images - With Forbidden Tags
+GET {{baseUrl}}/api/images/search?required=nature&forbidden=urban,city
+
+###
+
+### 11. Search Images - Complex Query
+GET {{baseUrl}}/api/images/search?required=nature,landscape&optional=sunset,mountains&forbidden=urban
+
+###
+
+### 12. Get Non-Existent Image (should return 404)
+GET {{baseUrl}}/api/images/99999
+
+> {%
+    client.test("Not found", function() {
+        client.assert(response.status === 404, "Response status is not 404");
+        client.assert(response.body.status === 404, "Error status incorrect");
+        client.assert(response.body.error === "Not Found", "Error type incorrect");
+    });
+%}
+
+###
+
+### 13. Upload Empty File (should return 400)
+POST {{baseUrl}}/api/images
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="empty.jpg"
+Content-Type: image/jpeg
+
+
+--WebAppBoundary--
+
+> {%
+    client.test("Empty file rejected", function() {
+        client.assert(response.status === 400, "Response status is not 400");
+        client.assert(response.body.message === "File cannot be empty", "Error message incorrect");
+    });
+%}
+
+###
+
+### 14. Upload Non-Image File (should return 400)
+POST {{baseUrl}}/api/images
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="document.pdf"
+Content-Type: application/pdf
+
+This is a PDF file
+--WebAppBoundary--
+
+> {%
+    client.test("Non-image rejected", function() {
+        client.assert(response.status === 400, "Response status is not 400");
+    });
+%}
+
+###
+
+### 15. Upload PNG Image
+POST {{baseUrl}}/api/images
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.png"
+Content-Type: image/png
+
+< {{testImagePath}}
+--WebAppBoundary--
+
+###
+
+### 16. Upload WebP Image
+POST {{baseUrl}}/api/images
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.webp"
+Content-Type: image/webp
+
+< {{testImagePath}}
+--WebAppBoundary--
+
+###
+
+### 17. Delete Image
+DELETE {{baseUrl}}/api/images/{{imageId}}
+
+> {%
+    client.test("Image deleted", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}
+
+###
+
+### 18. Verify Deleted Image Returns 404
+GET {{baseUrl}}/api/images/{{imageId}}
+
+> {%
+    client.test("Deleted image not found", function() {
+        client.assert(response.status === 404, "Response status is not 404");
+    });
+%}
+
+###
