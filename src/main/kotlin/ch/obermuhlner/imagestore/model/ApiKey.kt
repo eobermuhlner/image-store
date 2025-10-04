@@ -1,7 +1,7 @@
 package ch.obermuhlner.imagestore.model
 
 import jakarta.persistence.*
-import java.time.LocalDateTime
+import java.time.Instant
 
 @Entity
 @Table(name = "api_keys")
@@ -23,10 +23,10 @@ data class ApiKey(
     val permissions: Set<Permission> = emptySet(),
 
     @Column(nullable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now(),
+    val createdAt: Instant = Instant.now(),
 
     @Column
-    var lastUsedAt: LocalDateTime? = null,
+    var lastUsedAt: Instant? = null,
 
     @Column(nullable = false)
     var active: Boolean = true

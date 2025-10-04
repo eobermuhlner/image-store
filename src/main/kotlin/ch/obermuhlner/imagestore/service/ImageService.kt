@@ -10,7 +10,7 @@ import ch.obermuhlner.imagestore.storage.StorageService
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.LocalDateTime
+import java.time.Instant
 
 @Service
 @Transactional
@@ -38,7 +38,7 @@ class ImageService(
             filename = filename,
             contentType = contentType,
             size = data.size.toLong(),
-            uploadDate = LocalDateTime.now(),
+            uploadDate = Instant.now(),
             storageType = storageProperties.storage.type,
             storagePath = storagePath,
             uploadedByApiKeyId = uploadedByApiKeyId,

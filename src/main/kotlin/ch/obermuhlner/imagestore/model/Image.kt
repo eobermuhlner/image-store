@@ -1,7 +1,7 @@
 package ch.obermuhlner.imagestore.model
 
 import jakarta.persistence.*
-import java.time.LocalDateTime
+import java.time.Instant
 
 @Entity
 @Table(name = "images")
@@ -20,7 +20,7 @@ data class Image(
     val size: Long,
 
     @Column(nullable = false)
-    val uploadDate: LocalDateTime = LocalDateTime.now(),
+    val uploadDate: Instant = Instant.now(),
 
     @Column(nullable = false)
     val storageType: String,

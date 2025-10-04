@@ -1,7 +1,7 @@
 package ch.obermuhlner.imagestore.model
 
 import jakarta.persistence.*
-import java.time.LocalDateTime
+import java.time.Instant
 import java.util.UUID
 
 @Entity
@@ -27,5 +27,5 @@ data class ImageAccessToken(
     var active: Boolean = true,
 
     @Column(nullable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: Instant = Instant.now()
 )

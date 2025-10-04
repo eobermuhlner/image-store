@@ -7,7 +7,7 @@ import ch.obermuhlner.imagestore.security.ApiKeyAuthentication
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.security.SecureRandom
-import java.time.LocalDateTime
+import java.time.Instant
 
 @Service
 class ApiKeyService(
@@ -39,7 +39,7 @@ class ApiKeyService(
         for (apiKey in apiKeys) {
             if (passwordEncoder.matches(rawKey, apiKey.keyHash)) {
                 // Update last used timestamp
-                apiKey.lastUsedAt = LocalDateTime.now()
+                apiKey.lastUsedAt = Instant.now()
                 apiKeyRepository.save(apiKey)
 
                 // Create authentication object
