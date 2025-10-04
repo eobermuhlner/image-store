@@ -9,6 +9,7 @@ import ch.obermuhlner.imagestore.dto.toMetadataResponse
 import ch.obermuhlner.imagestore.dto.toUploadResponse
 import ch.obermuhlner.imagestore.model.Permission
 import ch.obermuhlner.imagestore.security.ApiKeyAuthentication
+import ch.obermuhlner.imagestore.service.ImageAccessTokenService
 import ch.obermuhlner.imagestore.service.ImageService
 import ch.obermuhlner.imagestore.service.SignedUrlService
 import io.swagger.v3.oas.annotations.Operation
@@ -39,6 +40,7 @@ class ImageController(
     private val imageService: ImageService,
     private val storageProperties: StorageProperties,
     private val signedUrlService: SignedUrlService?,
+    private val tokenService: ImageAccessTokenService?,
     @Value("\${imagestore.security.enabled:false}")
     private val securityEnabled: Boolean
 ) {
@@ -97,17 +99,18 @@ class ImageController(
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get image by ID", description = "Retrieve image data with CDN optimization headers (ETag, Cache-Control). Supports conditional GET with If-None-Match header. When security is enabled, requires either valid authentication OR a valid signed URL (signature + expires query parameters).")
+    @Operation(summary = "Get image by ID", description = "Retrieve image data with CDN optimization headers (ETag, Cache-Control). Supports conditional GET with If-None-Match header. When security is enabled, requires either valid authentication OR a valid signed URL (signature + expires) OR a valid access token.")
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "Image retrieved successfully", content = [Content(mediaType = "image/*")]),
         ApiResponse(responseCode = "304", description = "Not modified (cached version is still valid)"),
-        ApiResponse(responseCode = "403", description = "Access denied - authentication or valid signed URL required"),
+        ApiResponse(responseCode = "403", description = "Access denied - authentication, valid signed URL, or valid token required"),
         ApiResponse(responseCode = "404", description = "Image not found")
     ])
     fun getImage(
         @Parameter(description = "Image ID") @PathVariable id: Long,
         @Parameter(description = "HMAC signature for signed URL access") @RequestParam(required = false) signature: String?,
         @Parameter(description = "Expiry timestamp for signed URL access") @RequestParam(required = false) expires: Long?,
+        @Parameter(description = "Permanent access token") @RequestParam(required = false) token: String?,
         @Parameter(description = "ETag for conditional GET") @RequestHeader(value = "If-None-Match", required = false) ifNoneMatch: String?,
         @Parameter(description = "Last modified date for conditional GET") @RequestHeader(value = "If-Modified-Since", required = false) ifModifiedSince: String?
     ): ResponseEntity<ByteArray> {
@@ -116,8 +119,9 @@ class ImageController(
             val authenticated = SecurityContextHolder.getContext().authentication?.isAuthenticated == true
             val hasValidSignedUrl = signature != null && expires != null &&
                 signedUrlService?.validateSignedUrl(id, signature, expires) == true
+            val hasValidToken = token != null && tokenService?.validateToken(id, token) == true
 
-            if (!authenticated && !hasValidSignedUrl) {
+            if (!authenticated && !hasValidSignedUrl && !hasValidToken) {
                 throw org.springframework.security.access.AccessDeniedException("Access denied")
             }
         }

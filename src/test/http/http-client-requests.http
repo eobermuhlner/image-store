@@ -384,3 +384,96 @@ Authorization: Bearer {{adminApiKey}}
 %}
 
 ###
+
+### =================================================================
+### PERMANENT ACCESS TOKENS (for AI chat persistence)
+### =================================================================
+
+### 27. Generate Permanent Access Token (requires GENERATE_SIGNED_URL permission)
+POST {{baseUrl}}/api/images/{{secureImageId}}/token
+Authorization: Bearer {{uploadApiKey}}
+
+> {%
+    client.test("Token generated", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+        client.assert(response.body.token !== undefined, "Token missing");
+    });
+    client.global.set("accessToken", response.body.token);
+%}
+
+###
+
+### 28. Access Image with Permanent Token (no auth required, never expires)
+GET {{baseUrl}}/api/images/{{secureImageId}}?token={{accessToken}}
+Accept: image/*
+
+> {%
+    client.test("Token access successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+
+### 29. List All Access Tokens (requires ADMIN permission)
+GET {{baseUrl}}/api/admin/tokens
+Authorization: Bearer {{adminApiKey}}
+
+> {%
+    client.test("Tokens listed", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(Array.isArray(response.body), "Response should be an array");
+    });
+%}
+
+###
+
+### 30. List Tokens for Specific Image (requires ADMIN permission)
+GET {{baseUrl}}/api/admin/tokens/image/{{secureImageId}}
+Authorization: Bearer {{adminApiKey}}
+
+> {%
+    client.test("Image tokens listed", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(Array.isArray(response.body), "Response should be an array");
+    });
+%}
+
+###
+
+### 31. Revoke Specific Access Token (requires ADMIN permission)
+DELETE {{baseUrl}}/api/admin/tokens/{{accessToken}}
+Authorization: Bearer {{adminApiKey}}
+
+> {%
+    client.test("Token revoked", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}
+
+###
+
+### 32. Verify Revoked Token Access Fails
+GET {{baseUrl}}/api/images/{{secureImageId}}?token={{accessToken}}
+Accept: image/*
+
+> {%
+    client.test("Revoked token access denied", function() {
+        client.assert(response.status === 403, "Response status is not 403");
+    });
+%}
+
+###
+
+### 33. Revoke All Tokens for Image (requires ADMIN permission)
+DELETE {{baseUrl}}/api/admin/tokens/image/{{secureImageId}}
+Authorization: Bearer {{adminApiKey}}
+
+> {%
+    client.test("All tokens revoked", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.revokedCount !== undefined, "Revoked count missing");
+    });
+%}
+
+###

@@ -227,6 +227,40 @@ curl -X POST http://localhost:8080/api/images/1/sign \
 }
 ```
 
+### Generate Permanent Access Token (Security Enabled Only)
+
+Create a permanent token for long-term access (perfect for AI chat applications):
+
+```bash
+curl -X POST http://localhost:8080/api/images/1/token \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+**Response:**
+```json
+{
+  "token": "abc-123-uuid-here",
+  "imageId": 1,
+  "createdAt": "2025-10-04T12:00:00",
+  "active": true
+}
+```
+
+**Use the token to access the image:**
+```bash
+# No authentication needed - token never expires
+curl "http://localhost:8080/api/images/1?token=abc-123-uuid-here" \
+  -o downloaded.jpg
+```
+
+**Revoke token when needed:**
+```bash
+curl -X DELETE http://localhost:8080/api/admin/tokens/abc-123-uuid-here \
+  -H "Authorization: Bearer YOUR_ADMIN_API_KEY"
+```
+
+**Use case:** Store token in AI chat messages for permanent image access with ability to revoke if needed.
+
 ### Get Image Metadata
 
 ```bash

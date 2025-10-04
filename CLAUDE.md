@@ -16,9 +16,11 @@ REST API service for storing and retrieving images with metadata and tag-based s
 **Security** (disabled by default, configurable via `imagestore.security.enabled`):
 - API key authentication with BCrypt hashing (Bearer token)
 - HMAC-SHA256 signed URLs for time-limited public access
+- **Permanent access tokens** (UUID-based, never expire, revocable) - ideal for AI chat applications
 - Permission-based authorization (UPLOAD, DELETE, SEARCH, GENERATE_SIGNED_URL, ADMIN)
 - Initial admin key auto-generated on first startup when security enabled
 - Spring Security with conditional bean loading for backward compatibility
+- Token validation adds ~1ms overhead (negligible with CDN caching)
 
 **Key Features**:
 - Multipart file upload with validation (10MB limit, image types only)
@@ -31,16 +33,21 @@ REST API service for storing and retrieving images with metadata and tag-based s
 
 **Image Operations:**
 - `POST /api/images` - upload image with optional tags (requires UPLOAD permission when security enabled)
-- `GET /api/images/{id}` - retrieve image with CDN headers (accepts authentication OR signed URL)
+- `GET /api/images/{id}` - retrieve image with CDN headers (accepts authentication OR signed URL OR access token)
 - `GET /api/images/{id}/metadata` - get image metadata (requires SEARCH permission when security enabled)
 - `GET /api/images/search?required=tag1&optional=tag2&forbidden=tag3` - search by tags (requires SEARCH permission)
 - `DELETE /api/images/{id}` - delete image (requires DELETE permission)
-- `POST /api/images/{id}/sign` - generate signed URL (requires GENERATE_SIGNED_URL permission)
+- `POST /api/images/{id}/sign` - generate time-limited signed URL (requires GENERATE_SIGNED_URL permission)
+- `POST /api/images/{id}/token` - generate permanent access token (requires GENERATE_SIGNED_URL permission)
 
 **Admin Operations (security enabled only):**
 - `POST /api/admin/keys` - create new API key (requires ADMIN permission)
 - `GET /api/admin/keys` - list all API keys (requires ADMIN permission)
 - `DELETE /api/admin/keys/{id}` - revoke API key (requires ADMIN permission)
+- `GET /api/admin/tokens` - list all access tokens (requires ADMIN permission)
+- `GET /api/admin/tokens/image/{imageId}` - list tokens for specific image (requires ADMIN permission)
+- `DELETE /api/admin/tokens/{token}` - revoke specific access token (requires ADMIN permission)
+- `DELETE /api/admin/tokens/image/{imageId}` - revoke all tokens for image (requires ADMIN permission)
 
 **Health & Documentation:**
 - `GET /api/health` - storage backend health check (public)
