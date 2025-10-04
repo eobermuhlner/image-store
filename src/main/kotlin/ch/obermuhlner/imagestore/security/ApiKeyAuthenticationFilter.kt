@@ -19,6 +19,19 @@ class ApiKeyAuthenticationFilter(
     private val apiKeyService: ApiKeyService
 ) : OncePerRequestFilter() {
 
+    private val publicPaths = listOf(
+        "/api/health",
+        "/v3/api-docs",
+        "/swagger-ui",
+        "/swagger-resources",
+        "/webjars"
+    )
+
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
+        val path = request.requestURI
+        return publicPaths.any { path.startsWith(it) }
+    }
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
