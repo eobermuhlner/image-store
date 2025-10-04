@@ -28,13 +28,21 @@ class ImageController(
         @RequestParam("file") file: MultipartFile,
         @RequestParam("tags", required = false) tags: List<String>?
     ): ResponseEntity<ImageUploadResponse> {
+        // Validate file is not empty
         if (file.isEmpty) {
-            return ResponseEntity.badRequest().build()
+            throw IllegalArgumentException("File cannot be empty")
         }
 
+        // Validate content type
         val contentType = file.contentType ?: "application/octet-stream"
-        if (!contentType.startsWith("image/")) {
-            return ResponseEntity.badRequest().build()
+        if (!isValidImageType(contentType)) {
+            throw IllegalArgumentException("Only image files are allowed. Received: $contentType")
+        }
+
+        // Validate file size (additional check beyond servlet multipart limits)
+        val maxSize = 10 * 1024 * 1024L // 10MB
+        if (file.size > maxSize) {
+            throw IllegalArgumentException("File size exceeds maximum allowed size of ${maxSize / (1024 * 1024)}MB")
         }
 
         val image = imageService.storeImage(
@@ -45,6 +53,20 @@ class ImageController(
         )
 
         return ResponseEntity.status(HttpStatus.CREATED).body(image.toUploadResponse())
+    }
+
+    private fun isValidImageType(contentType: String): Boolean {
+        val validTypes = listOf(
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "image/svg+xml",
+            "image/bmp",
+            "image/tiff"
+        )
+        return validTypes.any { contentType.lowercase().startsWith(it) }
     }
 
     @GetMapping("/{id}")
