@@ -240,3 +240,147 @@ GET {{baseUrl}}/api/images/{{imageId}}
 %}
 
 ###
+
+### =================================================================
+### AUTHENTICATION & AUTHORIZATION (when security enabled)
+### =================================================================
+### Note: Set imagestore.security.enabled=true in application.yml
+### On first startup, an admin API key will be auto-generated
+### Copy that key and set it in the http-client.env.json file
+
+### 19. Create API Key (requires ADMIN permission)
+POST {{baseUrl}}/api/admin/keys
+Authorization: Bearer {{adminApiKey}}
+Content-Type: application/json
+
+{
+  "name": "Upload Service Key",
+  "permissions": ["UPLOAD", "SEARCH", "GENERATE_SIGNED_URL"]
+}
+
+> {%
+    client.test("API key created", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+        client.assert(response.body.key !== undefined, "API key missing");
+    });
+    client.global.set("uploadApiKey", response.body.key);
+%}
+
+###
+
+### 20. List API Keys (requires ADMIN permission)
+GET {{baseUrl}}/api/admin/keys
+Authorization: Bearer {{adminApiKey}}
+
+> {%
+    client.test("API keys listed", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(Array.isArray(response.body), "Response should be an array");
+    });
+%}
+
+###
+
+### 21. Upload Image with API Key
+POST {{baseUrl}}/api/images
+Authorization: Bearer {{uploadApiKey}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="secure-image.jpg"
+Content-Type: image/jpeg
+
+< {{testImagePath}}
+--WebAppBoundary
+Content-Disposition: form-data; name="tags"
+
+secure
+--WebAppBoundary--
+
+> {%
+    client.test("Authenticated upload successful", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+    });
+    client.global.set("secureImageId", response.body.id);
+%}
+
+###
+
+### 22. Generate Signed URL (requires GENERATE_SIGNED_URL permission)
+POST {{baseUrl}}/api/images/{{secureImageId}}/sign
+Authorization: Bearer {{uploadApiKey}}
+Content-Type: application/json
+
+{
+  "expiresIn": 3600
+}
+
+> {%
+    client.test("Signed URL generated", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.url !== undefined, "Signed URL missing");
+    });
+    // Extract signature and expires from URL
+    const url = response.body.url;
+    const params = new URLSearchParams(url.split('?')[1]);
+    client.global.set("signedSignature", params.get('signature'));
+    client.global.set("signedExpires", params.get('expires'));
+%}
+
+###
+
+### 23. Access Image with Signed URL (no auth required)
+GET {{baseUrl}}/api/images/{{secureImageId}}?signature={{signedSignature}}&expires={{signedExpires}}
+Accept: image/*
+
+> {%
+    client.test("Signed URL access successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+###
+
+### 24. Access Image without Authentication (should fail if security enabled)
+GET {{baseUrl}}/api/images/{{secureImageId}}
+Accept: image/*
+
+> {%
+    client.test("Unauthenticated access denied", function() {
+        client.assert(response.status === 403, "Response status is not 403");
+    });
+%}
+
+###
+
+### 25. Upload without Permission (should fail)
+POST {{baseUrl}}/api/images
+Authorization: Bearer invalid-key-12345
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="test.jpg"
+Content-Type: image/jpeg
+
+< {{testImagePath}}
+--WebAppBoundary--
+
+> {%
+    client.test("Invalid key rejected", function() {
+        client.assert(response.status === 403, "Response status is not 403");
+    });
+%}
+
+###
+
+### 26. Revoke API Key (requires ADMIN permission)
+DELETE {{baseUrl}}/api/admin/keys/{{keyIdToRevoke}}
+Authorization: Bearer {{adminApiKey}}
+
+> {%
+    client.test("API key revoked", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}
+
+###

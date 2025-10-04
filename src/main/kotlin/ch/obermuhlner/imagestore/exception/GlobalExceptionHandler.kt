@@ -2,6 +2,7 @@ package ch.obermuhlner.imagestore.exception
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.multipart.MaxUploadSizeExceededException
@@ -39,6 +40,17 @@ class GlobalExceptionHandler {
                 status = HttpStatus.PAYLOAD_TOO_LARGE.value(),
                 error = "Payload Too Large",
                 message = "File size exceeds maximum allowed limit",
+                timestamp = LocalDateTime.now()
+            ))
+    }
+
+    @ExceptionHandler(AccessDeniedException::class)
+    fun handleAccessDenied(ex: AccessDeniedException): ResponseEntity<ErrorResponse> {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(ErrorResponse(
+                status = HttpStatus.FORBIDDEN.value(),
+                error = "Forbidden",
+                message = ex.message ?: "Access denied",
                 timestamp = LocalDateTime.now()
             ))
     }

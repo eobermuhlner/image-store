@@ -47,3 +47,10 @@ imagestore:
   cache:
     max-age: 31536000  # 1 year in seconds
     enable-etag: true
+
+  security:
+    enabled: false  # Set to true to enable authentication/authorization
+    secret-key: change-me-in-production-use-a-long-random-string  # HMAC secret for signed URLs
+    signed-url:
+      default-expiry-seconds: 3600  # 1 hour
+      max-expiry-seconds: 604800  # 7 days

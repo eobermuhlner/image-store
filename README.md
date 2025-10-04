@@ -5,6 +5,8 @@ A REST API service for storing and retrieving images with metadata and tag-based
 ## Features
 
 - **Multiple Storage Backends**: Filesystem, Database (H2/PostgreSQL), or AWS S3
+- **Authentication & Authorization**: API key-based authentication with permission-based access control
+- **Signed URLs**: Time-limited HMAC-signed URLs for secure public image access
 - **Tag-Based Search**: Advanced filtering with required, optional, and forbidden tags
 - **CDN-Ready**: Built-in caching headers (ETag, Cache-Control) for optimal performance
 - **Validation**: File size limits (10MB) and content-type validation
@@ -85,12 +87,94 @@ imagestore:
     enable-etag: true
 ```
 
+### Security Configuration
+
+Authentication and authorization are **disabled by default**. To enable:
+
+```yaml
+imagestore:
+  security:
+    enabled: true  # Enable authentication/authorization
+    secret-key: your-long-random-secret-key-change-in-production  # HMAC secret for signed URLs
+    signed-url:
+      default-expiry-seconds: 3600   # 1 hour
+      max-expiry-seconds: 604800      # 7 days
+```
+
+**Important**: When you first start the application with security enabled and no API keys exist, an initial admin key will be automatically generated and printed to the console. **Save this key** - it won't be shown again!
+
+#### Permissions
+
+API keys can have the following permissions:
+- `UPLOAD` - Upload new images
+- `DELETE` - Delete images
+- `SEARCH` - Search and list images, get metadata
+- `GENERATE_SIGNED_URL` - Create time-limited signed URLs for public access
+- `ADMIN` - Manage API keys (create, list, revoke)
+
 ## API Endpoints
+
+### Authentication
+
+When security is enabled, most endpoints require authentication via Bearer token:
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  http://localhost:8080/api/images
+```
+
+### Admin Endpoints (Security Enabled Only)
+
+#### Create API Key
+
+```bash
+curl -X POST http://localhost:8080/api/admin/keys \
+  -H "Authorization: Bearer YOUR_ADMIN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Upload Service Key",
+    "permissions": ["UPLOAD", "SEARCH"]
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": 2,
+  "name": "Upload Service Key",
+  "key": "sk_1a2b3c4d5e6f7g8h9i0j...",
+  "permissions": ["UPLOAD", "SEARCH"],
+  "createdAt": "2025-10-04T12:00:00"
+}
+```
+
+**Note**: The API key is only shown once during creation!
+
+#### List API Keys
+
+```bash
+curl http://localhost:8080/api/admin/keys \
+  -H "Authorization: Bearer YOUR_ADMIN_API_KEY"
+```
+
+#### Revoke API Key
+
+```bash
+curl -X DELETE http://localhost:8080/api/admin/keys/2 \
+  -H "Authorization: Bearer YOUR_ADMIN_API_KEY"
+```
 
 ### Upload Image
 
 ```bash
+# Without security
 curl -X POST http://localhost:8080/api/images \
+  -F "file=@image.jpg" \
+  -F "tags=nature,landscape,sunset"
+
+# With security enabled
+curl -X POST http://localhost:8080/api/images \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -F "file=@image.jpg" \
   -F "tags=nature,landscape,sunset"
 ```
@@ -110,10 +194,38 @@ curl -X POST http://localhost:8080/api/images \
 ### Retrieve Image
 
 ```bash
+# Without security (or with signed URL)
 curl http://localhost:8080/api/images/1 -o downloaded.jpg
+
+# With security enabled (authenticated)
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  http://localhost:8080/api/images/1 -o downloaded.jpg
+
+# With security enabled (using signed URL - no auth needed)
+curl "http://localhost:8080/api/images/1?signature=abc123&expires=1234567890" \
+  -o downloaded.jpg
 ```
 
 Returns the image with CDN-optimized headers (ETag, Cache-Control, Last-Modified).
+
+### Generate Signed URL (Security Enabled Only)
+
+Create a time-limited URL for public access to an image:
+
+```bash
+curl -X POST http://localhost:8080/api/images/1/sign \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"expiresIn": 3600}'
+```
+
+**Response:**
+```json
+{
+  "url": "/api/images/1?signature=xyz789&expires=1234567890",
+  "expiresAt": "2025-10-04T13:00:00Z"
+}
+```
 
 ### Get Image Metadata
 
@@ -258,8 +370,10 @@ The API returns structured error responses:
 **HTTP Status Codes:**
 - `201` - Image uploaded successfully
 - `200` - Request successful
+- `204` - No Content (successful deletion)
 - `304` - Not Modified (cache hit)
 - `400` - Bad Request (validation error)
+- `403` - Forbidden (insufficient permissions or invalid authentication)
 - `404` - Not Found
 - `413` - Payload Too Large
 - `500` - Internal Server Error

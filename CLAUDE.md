@@ -13,20 +13,39 @@ REST API service for storing and retrieving images with metadata and tag-based s
 - `Image` entity with many-to-many relationship to `Tag`
 - Tag-based search with AND/OR/NOT logic using JPQL
 
+**Security** (disabled by default, configurable via `imagestore.security.enabled`):
+- API key authentication with BCrypt hashing (Bearer token)
+- HMAC-SHA256 signed URLs for time-limited public access
+- Permission-based authorization (UPLOAD, DELETE, SEARCH, GENERATE_SIGNED_URL, ADMIN)
+- Initial admin key auto-generated on first startup when security enabled
+- Spring Security with conditional bean loading for backward compatibility
+
 **Key Features**:
 - Multipart file upload with validation (10MB limit, image types only)
 - CDN optimization (ETag, Cache-Control, conditional GET with If-None-Match)
 - Global exception handling with structured error responses
 - Health check endpoint that tests storage backend
+- OpenAPI 3 specification available at `/v3/api-docs` and Swagger UI at `/swagger-ui.html`
 
 ## Endpoints
 
-- `POST /api/images` - upload image with optional tags
-- `GET /api/images/{id}` - retrieve image with CDN headers
-- `GET /api/images/{id}/metadata` - get image metadata
-- `GET /api/images/search?required=tag1&optional=tag2&forbidden=tag3` - search by tags
-- `DELETE /api/images/{id}` - delete image
-- `GET /api/health` - storage backend health check
+**Image Operations:**
+- `POST /api/images` - upload image with optional tags (requires UPLOAD permission when security enabled)
+- `GET /api/images/{id}` - retrieve image with CDN headers (accepts authentication OR signed URL)
+- `GET /api/images/{id}/metadata` - get image metadata (requires SEARCH permission when security enabled)
+- `GET /api/images/search?required=tag1&optional=tag2&forbidden=tag3` - search by tags (requires SEARCH permission)
+- `DELETE /api/images/{id}` - delete image (requires DELETE permission)
+- `POST /api/images/{id}/sign` - generate signed URL (requires GENERATE_SIGNED_URL permission)
+
+**Admin Operations (security enabled only):**
+- `POST /api/admin/keys` - create new API key (requires ADMIN permission)
+- `GET /api/admin/keys` - list all API keys (requires ADMIN permission)
+- `DELETE /api/admin/keys/{id}` - revoke API key (requires ADMIN permission)
+
+**Health & Documentation:**
+- `GET /api/health` - storage backend health check (public)
+- `GET /v3/api-docs` - OpenAPI specification (public)
+- `GET /swagger-ui.html` - Swagger UI (public)
 
 ## Testing Requirements
 - Maintain test coverage >80%
@@ -38,7 +57,8 @@ REST API service for storing and retrieving images with metadata and tag-based s
 - Prefer straightforward solutions over complex abstractions
 
 ## Claude Instructions
-- keep the following files up to date:
-  - CLAUDE.md
+- **IMPORTANT**: Always keep the following files up to date after making changes:
+  - CLAUDE.md (this file)
   - README.md
   - src/test/http/http-client-requests.http
+- After implementing new features or endpoints, immediately update all three files before considering the task complete

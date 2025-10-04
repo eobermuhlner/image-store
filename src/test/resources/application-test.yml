@@ -1,0 +1,3 @@
+imagestore:
+  security:
+    enabled: false  # Disable security for tests

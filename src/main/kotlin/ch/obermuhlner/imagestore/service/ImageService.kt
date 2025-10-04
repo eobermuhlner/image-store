@@ -5,7 +5,9 @@ import ch.obermuhlner.imagestore.model.Image
 import ch.obermuhlner.imagestore.model.Tag
 import ch.obermuhlner.imagestore.repository.ImageRepository
 import ch.obermuhlner.imagestore.repository.TagRepository
+import ch.obermuhlner.imagestore.security.ApiKeyAuthentication
 import ch.obermuhlner.imagestore.storage.StorageService
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -28,6 +30,10 @@ class ImageService(
             }
         }.toMutableSet()
 
+        // Get API key ID from authenticated user if available
+        val uploadedByApiKeyId = (SecurityContextHolder.getContext().authentication as? ApiKeyAuthentication)
+            ?.apiKey?.id
+
         val image = Image(
             filename = filename,
             contentType = contentType,
@@ -35,6 +41,7 @@ class ImageService(
             uploadDate = LocalDateTime.now(),
             storageType = storageProperties.storage.type,
             storagePath = storagePath,
+            uploadedByApiKeyId = uploadedByApiKeyId,
             tags = tagEntities
         )
 

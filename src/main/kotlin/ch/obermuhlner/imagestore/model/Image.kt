@@ -28,6 +28,9 @@ data class Image(
     @Column(nullable = false)
     val storagePath: String,
 
+    @Column(nullable = true)
+    val uploadedByApiKeyId: Long? = null,
+
     @ManyToMany(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "image_tags",
