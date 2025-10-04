@@ -50,24 +50,49 @@ class ImageController(
     @GetMapping("/{id}")
     fun getImage(
         @PathVariable id: Long,
-        @RequestHeader(value = "If-None-Match", required = false) ifNoneMatch: String?
+        @RequestHeader(value = "If-None-Match", required = false) ifNoneMatch: String?,
+        @RequestHeader(value = "If-Modified-Since", required = false) ifModifiedSince: String?
     ): ResponseEntity<ByteArray> {
         val (image, data) = imageService.retrieveImage(id)
 
+        // Check ETag first (stronger validation)
         val etag = generateETag(data)
         if (ifNoneMatch == etag) {
-            return ResponseEntity.status(HttpStatus.NOT_MODIFIED).build()
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                .header(HttpHeaders.ETAG, etag)
+                .header(HttpHeaders.CACHE_CONTROL, buildCacheControl().headerValue)
+                .build()
         }
 
-        val cacheControl = CacheControl.maxAge(storageProperties.cache.maxAge.toLong(), TimeUnit.SECONDS)
-            .cachePublic()
+        // Check If-Modified-Since (weaker validation)
+        if (ifModifiedSince != null && !isModifiedSince(image.uploadDate.toString(), ifModifiedSince)) {
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+                .header(HttpHeaders.ETAG, etag)
+                .header(HttpHeaders.CACHE_CONTROL, buildCacheControl().headerValue)
+                .header(HttpHeaders.LAST_MODIFIED, image.uploadDate.toString())
+                .build()
+        }
 
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(image.contentType))
             .header(HttpHeaders.ETAG, etag)
-            .header(HttpHeaders.CACHE_CONTROL, cacheControl.headerValue)
+            .header(HttpHeaders.CACHE_CONTROL, buildCacheControl().headerValue)
             .header(HttpHeaders.LAST_MODIFIED, image.uploadDate.toString())
+            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"${image.filename}\"")
             .body(data)
+    }
+
+    private fun buildCacheControl(): CacheControl {
+        return CacheControl.maxAge(storageProperties.cache.maxAge.toLong(), TimeUnit.SECONDS)
+            .cachePublic()
+    }
+
+    private fun isModifiedSince(lastModified: String, ifModifiedSince: String): Boolean {
+        return try {
+            lastModified > ifModifiedSince
+        } catch (e: Exception) {
+            true
+        }
     }
 
     @GetMapping("/{id}/metadata")
