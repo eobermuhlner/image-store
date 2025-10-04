@@ -110,7 +110,7 @@ GET {{baseUrl}}/api/images/{{imageId}}/metadata
 ###
 
 ### 7. Search Images - Required Tags
-GET {{baseUrl}}/api/images/search?required=nature,landscape
+GET {{baseUrl}}/api/images/search?required=parrot
 
 > {%
     client.test("Search successful", function() {

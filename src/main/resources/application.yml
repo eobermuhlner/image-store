@@ -16,7 +16,7 @@ springdoc:
     description: REST API service for storing and retrieving images with metadata and tag-based search
 
   datasource:
-    url: jdbc:h2:mem:imagestore
+    url: jdbc:h2:file:./data/imagestore
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -24,7 +24,7 @@ springdoc:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
