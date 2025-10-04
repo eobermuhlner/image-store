@@ -11,7 +11,7 @@ class StorageConfig {
     @Bean
     @ConditionalOnProperty(name = ["imagestore.storage.type"], havingValue = "filesystem", matchIfMissing = true)
     fun fileSystemStorageService(storageProperties: StorageProperties): StorageService {
-        return FileSystemStorageService(storageProperties.filesystem.basePath)
+        return FileSystemStorageService(storageProperties.storage.filesystem.basePath)
     }
 
     @Bean
@@ -24,9 +24,9 @@ class StorageConfig {
     @ConditionalOnProperty(name = ["imagestore.storage.type"], havingValue = "s3")
     fun s3StorageService(storageProperties: StorageProperties): StorageService {
         return S3StorageService(
-            bucketName = storageProperties.s3.bucket,
-            region = storageProperties.s3.region,
-            endpoint = storageProperties.s3.endpoint
+            bucketName = storageProperties.storage.s3.bucket,
+            region = storageProperties.storage.s3.region,
+            endpoint = storageProperties.storage.s3.endpoint
         )
     }
 }
