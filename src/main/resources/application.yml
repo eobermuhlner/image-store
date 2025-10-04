@@ -5,6 +5,16 @@ spring:
   main:
     allow-bean-definition-overriding: true
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  info:
+    title: Image Store API
+    version: 0.0.1-SNAPSHOT
+    description: REST API service for storing and retrieving images with metadata and tag-based search
+
   datasource:
     url: jdbc:h2:mem:imagestore
     driver-class-name: org.h2.Driver

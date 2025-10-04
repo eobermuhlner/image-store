@@ -1,5 +1,22 @@
 ### Image Store API - HTTP Client Requests
 
+### OpenAPI Documentation
+
+### 1a. Get OpenAPI Specification (JSON)
+GET {{baseUrl}}/v3/api-docs
+
+###
+
+### 1b. Get OpenAPI Specification (YAML)
+GET {{baseUrl}}/v3/api-docs.yaml
+
+###
+
+### 1c. Open Swagger UI
+GET {{baseUrl}}/swagger-ui.html
+
+###
+
 ### 1. Health Check
 GET {{baseUrl}}/api/health
 

@@ -36,3 +36,9 @@ REST API service for storing and retrieving images with metadata and tag-based s
 ## Development Principles
 - Keep it simple - avoid overengineering
 - Prefer straightforward solutions over complex abstractions
+
+## Claude Instructions
+- keep the following files up to date:
+  - CLAUDE.md
+  - README.md
+  - src/test/http/http-client-requests.http

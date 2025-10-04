@@ -6,6 +6,13 @@ import ch.obermuhlner.imagestore.dto.ImageUploadResponse
 import ch.obermuhlner.imagestore.dto.toMetadataResponse
 import ch.obermuhlner.imagestore.dto.toUploadResponse
 import ch.obermuhlner.imagestore.service.ImageService
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.CacheControl
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -18,15 +25,21 @@ import java.util.concurrent.TimeUnit
 
 @RestController
 @RequestMapping("/api/images")
+@Tag(name = "Images", description = "Image storage and retrieval operations")
 class ImageController(
     private val imageService: ImageService,
     private val storageProperties: StorageProperties
 ) {
 
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @Operation(summary = "Upload an image", description = "Upload an image file with optional tags. Max size: 10MB. Supported formats: JPEG, PNG, GIF, WebP, SVG, BMP, TIFF")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "201", description = "Image uploaded successfully", content = [Content(schema = Schema(implementation = ImageUploadResponse::class))]),
+        ApiResponse(responseCode = "400", description = "Invalid file or file too large")
+    ])
     fun uploadImage(
-        @RequestParam("file") file: MultipartFile,
-        @RequestParam("tags", required = false) tags: List<String>?
+        @Parameter(description = "Image file to upload") @RequestParam("file") file: MultipartFile,
+        @Parameter(description = "Optional tags for the image") @RequestParam("tags", required = false) tags: List<String>?
     ): ResponseEntity<ImageUploadResponse> {
         // Validate file is not empty
         if (file.isEmpty) {
@@ -70,10 +83,16 @@ class ImageController(
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get image by ID", description = "Retrieve image data with CDN optimization headers (ETag, Cache-Control). Supports conditional GET with If-None-Match header")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "Image retrieved successfully", content = [Content(mediaType = "image/*")]),
+        ApiResponse(responseCode = "304", description = "Not modified (cached version is still valid)"),
+        ApiResponse(responseCode = "404", description = "Image not found")
+    ])
     fun getImage(
-        @PathVariable id: Long,
-        @RequestHeader(value = "If-None-Match", required = false) ifNoneMatch: String?,
-        @RequestHeader(value = "If-Modified-Since", required = false) ifModifiedSince: String?
+        @Parameter(description = "Image ID") @PathVariable id: Long,
+        @Parameter(description = "ETag for conditional GET") @RequestHeader(value = "If-None-Match", required = false) ifNoneMatch: String?,
+        @Parameter(description = "Last modified date for conditional GET") @RequestHeader(value = "If-Modified-Since", required = false) ifModifiedSince: String?
     ): ResponseEntity<ByteArray> {
         val (image, data) = imageService.retrieveImage(id)
 
@@ -118,16 +137,25 @@ class ImageController(
     }
 
     @GetMapping("/{id}/metadata")
-    fun getImageMetadata(@PathVariable id: Long): ResponseEntity<ImageMetadataResponse> {
+    @Operation(summary = "Get image metadata", description = "Retrieve image metadata including filename, content type, size, upload date, and tags")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "Metadata retrieved successfully", content = [Content(schema = Schema(implementation = ImageMetadataResponse::class))]),
+        ApiResponse(responseCode = "404", description = "Image not found")
+    ])
+    fun getImageMetadata(@Parameter(description = "Image ID") @PathVariable id: Long): ResponseEntity<ImageMetadataResponse> {
         val image = imageService.getImageMetadata(id)
         return ResponseEntity.ok(image.toMetadataResponse())
     }
 
     @GetMapping("/search")
+    @Operation(summary = "Search images by tags", description = "Search images using tag-based query with AND/OR/NOT logic. Required tags (AND), optional tags (OR), and forbidden tags (NOT)")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "Search completed successfully", content = [Content(schema = Schema(implementation = ImageMetadataResponse::class))])
+    ])
     fun searchImages(
-        @RequestParam(required = false) required: List<String>?,
-        @RequestParam(required = false) optional: List<String>?,
-        @RequestParam(required = false) forbidden: List<String>?
+        @Parameter(description = "Tags that must all be present (AND logic)") @RequestParam(required = false) required: List<String>?,
+        @Parameter(description = "Tags where at least one should be present (OR logic)") @RequestParam(required = false) optional: List<String>?,
+        @Parameter(description = "Tags that must not be present (NOT logic)") @RequestParam(required = false) forbidden: List<String>?
     ): ResponseEntity<List<ImageMetadataResponse>> {
         val images = imageService.searchImages(
             requiredTags = required ?: emptyList(),
@@ -138,7 +166,12 @@ class ImageController(
     }
 
     @DeleteMapping("/{id}")
-    fun deleteImage(@PathVariable id: Long): ResponseEntity<Void> {
+    @Operation(summary = "Delete image", description = "Delete an image and its metadata from storage")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "204", description = "Image deleted successfully"),
+        ApiResponse(responseCode = "404", description = "Image not found")
+    ])
+    fun deleteImage(@Parameter(description = "Image ID") @PathVariable id: Long): ResponseEntity<Void> {
         imageService.deleteImage(id)
         return ResponseEntity.noContent().build()
     }
