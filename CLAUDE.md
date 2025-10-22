@@ -12,6 +12,8 @@ REST API service for storing and retrieving images with metadata and tag-based s
 **Domain Model**:
 - `Image` entity with many-to-many relationship to `Tag`
 - Tag-based search with AND/OR/NOT logic using JPQL
+- Tags are automatically normalized to lowercase for case-insensitive storage and search
+- Search results are sorted by relevance (number of matching optional tags) then by upload date (newest first)
 
 **Security** (disabled by default, configurable via `imagestore.security.enabled`):
 - API key authentication with BCrypt hashing (Bearer token)

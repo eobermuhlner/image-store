@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository
 interface ImageRepository : JpaRepository<Image, Long> {
 
     @Query("""
-        SELECT DISTINCT i FROM Image i
+        SELECT i FROM Image i
         LEFT JOIN i.tags t
         WHERE (COALESCE(:requiredTagsSize, 0) = 0 OR
                (SELECT COUNT(DISTINCT rt.name) FROM Image img
@@ -19,6 +19,14 @@ interface ImageRepository : JpaRepository<Image, Long> {
         AND (COALESCE(:optionalTagsSize, 0) = 0 OR t.name IN :optionalTags)
         AND (COALESCE(:forbiddenTagsSize, 0) = 0 OR i.id NOT IN
              (SELECT img2.id FROM Image img2 JOIN img2.tags ft WHERE ft.name IN :forbiddenTags))
+        GROUP BY i.id
+        ORDER BY
+            CASE WHEN :optionalTagsSize > 0 THEN
+                (SELECT COUNT(ot.name) FROM Image img3
+                 JOIN img3.tags ot
+                 WHERE img3.id = i.id AND ot.name IN :optionalTags)
+            ELSE 0 END DESC,
+            i.uploadDate DESC
     """)
     fun searchByTags(
         @Param("requiredTags") requiredTags: List<String>,

@@ -1,4 +1,9 @@
 ### Image Store API - HTTP Client Requests
+###
+### Note: Tags are automatically normalized to lowercase for case-insensitive storage and search.
+### For example, "Nature", "NATURE", and "nature" are all stored as "nature".
+###
+### Search results are sorted by relevance (number of matching optional tags), then by upload date (newest first).
 
 ### OpenAPI Documentation
 

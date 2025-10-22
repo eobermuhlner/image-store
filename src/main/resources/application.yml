@@ -5,16 +5,6 @@ spring:
   main:
     allow-bean-definition-overriding: true
 
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-  info:
-    title: Image Store API
-    version: 0.0.1-SNAPSHOT
-    description: REST API service for storing and retrieving images with metadata and tag-based search
-
   datasource:
     url: jdbc:h2:file:./data/imagestore
     driver-class-name: org.h2.Driver
@@ -24,7 +14,7 @@ springdoc:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -33,6 +23,16 @@ springdoc:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  info:
+    title: Image Store API
+    version: 0.0.1-SNAPSHOT
+    description: REST API service for storing and retrieving images with metadata and tag-based search
 
 imagestore:
   storage:

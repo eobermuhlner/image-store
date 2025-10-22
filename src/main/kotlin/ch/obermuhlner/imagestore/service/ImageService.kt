@@ -7,6 +7,7 @@ import ch.obermuhlner.imagestore.repository.ImageRepository
 import ch.obermuhlner.imagestore.repository.TagRepository
 import ch.obermuhlner.imagestore.security.ApiKeyAuthentication
 import ch.obermuhlner.imagestore.storage.StorageService
+import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,13 +21,15 @@ class ImageService(
     private val storageService: StorageService,
     private val storageProperties: StorageProperties
 ) {
+    val logger = LoggerFactory.getLogger(javaClass)
 
     fun storeImage(data: ByteArray, filename: String, contentType: String, tags: List<String>): Image {
         val storagePath = storageService.store(data, filename)
 
         val tagEntities = tags.map { tagName ->
-            tagRepository.findByName(tagName).orElseGet {
-                tagRepository.save(Tag(name = tagName))
+            val normalizedName = tagName.lowercase()
+            tagRepository.findByName(normalizedName).orElseGet {
+                tagRepository.save(Tag(name = normalizedName))
             }
         }.toMutableSet()
 
@@ -61,14 +64,16 @@ class ImageService(
     }
 
     fun searchImages(requiredTags: List<String>, optionalTags: List<String>, forbiddenTags: List<String>): List<Image> {
-        return imageRepository.searchByTags(
-            requiredTags = requiredTags,
+        val result = imageRepository.searchByTags(
+            requiredTags = requiredTags.map { it.lowercase() },
             requiredTagsSize = requiredTags.size,
-            optionalTags = optionalTags,
+            optionalTags = optionalTags.map { it.lowercase() },
             optionalTagsSize = optionalTags.size,
-            forbiddenTags = forbiddenTags,
+            forbiddenTags = forbiddenTags.map { it.lowercase() },
             forbiddenTagsSize = forbiddenTags.size
         )
+        logger.info("Found ${result.size} images for required=$requiredTags optional=$optionalTags forbidden=$forbiddenTags")
+        return result
     }
 
     fun deleteImage(id: Long) {

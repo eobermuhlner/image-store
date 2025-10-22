@@ -170,13 +170,13 @@ curl -X DELETE http://localhost:8080/api/admin/keys/2 \
 # Without security
 curl -X POST http://localhost:8080/api/images \
   -F "file=@image.jpg" \
-  -F "tags=nature,landscape,sunset"
+  -F "tags=Nature,LANDSCAPE,sunset"
 
 # With security enabled
 curl -X POST http://localhost:8080/api/images \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -F "file=@image.jpg" \
-  -F "tags=nature,landscape,sunset"
+  -F "tags=Nature,LANDSCAPE,sunset"
 ```
 
 **Response:**
@@ -190,6 +190,8 @@ curl -X POST http://localhost:8080/api/images \
   "tags": ["nature", "landscape", "sunset"]
 }
 ```
+
+**Note:** Tags are automatically converted to lowercase regardless of how they are uploaded.
 
 ### Retrieve Image
 
@@ -290,6 +292,10 @@ curl "http://localhost:8080/api/images/search?required=nature,landscape&optional
 - `required`: Images must have ALL these tags (AND)
 - `optional`: Images should have ANY of these tags (OR)
 - `forbidden`: Images must NOT have ANY of these tags (NOT)
+
+**Note:** Tags are automatically normalized to lowercase, making searches case-insensitive (e.g., "Nature", "NATURE", and "nature" are all equivalent).
+
+**Sorting:** Results are sorted by relevance - images matching more optional tags appear first, with upload date (newest first) as a tiebreaker.
 
 ### Delete Image
 
