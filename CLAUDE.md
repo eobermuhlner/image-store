@@ -2,6 +2,14 @@
 
 REST API service for storing and retrieving images with metadata and tag-based search.
 
+## CI/CD Pipeline
+
+The project includes automated CI/CD pipelines using GitHub Actions:
+
+- **CI Workflow** (`.github/workflows/ci.yml`): Runs tests, builds the application, and generates coverage reports on every push and pull request
+- **Docker Build Workflow** (`.github/workflows/docker-build.yml`): Builds and optionally pushes Docker images to the container registry
+- **CD Workflow** (`.github/workflows/cd.yml`): Deploys the application to production when tags are pushed
+
 ## Architecture
 
 **Storage Backends** (configurable via `imagestore.storage.type`):

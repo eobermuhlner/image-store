@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: [17, 21]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK ${{ matrix.java-version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ matrix.java-version }}
+        distribution: 'temurin'
+        cache: 'gradle'
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build with Gradle
+      run: ./gradlew build --no-daemon
+      
+    - name: Run tests
+      run: ./gradlew test --no-daemon
+      
+    - name: Generate JaCoCo coverage report
+      run: ./gradlew jacocoTestReport --no-daemon
+
+    - name: Verify coverage thresholds
+      run: ./gradlew jacocoTestCoverageVerification --no-daemon
+      
+    - name: Upload test report
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-report-${{ matrix.java-version }}
+        path: build/reports/tests/test/
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: build/reports/jacoco/test/jacocoTestReport.xml
+        flags: backend
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: false
+        
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: matrix.java-version == 17
+      with:
+        files: |
+          build/test-results/test/TEST-*.xml

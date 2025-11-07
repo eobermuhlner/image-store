@@ -375,6 +375,32 @@ src/main/kotlin/ch/obermuhlner/imagestore/
 └── storage/         # Storage backend implementations
 ```
 
+### CI/CD Pipeline
+
+The project includes automated CI/CD pipelines using GitHub Actions:
+
+- **CI Workflow** (`.github/workflows/ci.yml`): Runs tests, builds the application, and generates coverage reports on every push and pull request
+- **Docker Build Workflow** (`.github/workflows/docker-build.yml`): Builds and optionally pushes Docker images to the container registry
+- **CD Workflow** (`.github/workflows/cd.yml`): Deploys the application to production when tags are pushed
+
+### Building and Running with Docker
+
+The application can be built and run using Docker:
+
+```bash
+# Build the Docker image
+docker build -t image-store .
+
+# Run the application in Docker
+docker run -p 8080:8080 image-store
+
+# Run with environment variables for configuration
+docker run -p 8080:8080 \
+  -e IMAGESTORE_STORAGE_TYPE=filesystem \
+  -e IMAGESTORE_STORAGE_FILESYSTEM_BASE-PATH=/data/images \
+  image-store
+```
+
 ### Adding a New Storage Backend
 
 1. Implement the `StorageService` interface
