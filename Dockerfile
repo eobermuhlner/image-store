@@ -8,7 +8,7 @@ WORKDIR /app
 RUN gradle clean build -x test --no-daemon
 
 # Stage 2: Create the runtime image
-FROM openjdk:17-jre-slim
+FROM eclipse-temurin:17-jre-jammy
 
 # Install Tini for proper init process
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
