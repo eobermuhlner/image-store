@@ -73,7 +73,41 @@ class ImageService(
             forbiddenTagsSize = forbiddenTags.size
         )
         logger.info("Found ${result.size} images for required=$requiredTags optional=$optionalTags forbidden=$forbiddenTags")
-        return result
+        val sortedResults = sortByRelevance(result, optionalTags)
+        return sortedResults
+    }
+
+    private fun sortByRelevance(images: List<Image>, optionalTags: List<String>): List<Image> {
+        if (optionalTags.isEmpty()) return images
+
+        val optional = optionalTags.map { it.lowercase() }.toSet()
+
+        return images
+            .asSequence()
+            .map { img ->
+                val tags = img.tags
+                val n = tags.size.takeIf { it > 0 } ?: 1 // avoid div by zero (score stays 0.0 when n==0)
+                val seen = HashSet<String>()
+
+                val score = tags.asSequence()
+                    .withIndex()
+                    .mapNotNull { (idx, tag) ->
+                        val name = tag.name.lowercase()
+                        if (name in optional && seen.add(name)) {
+                            // Linear weight: 1.0 for first, >0 for last, 0.0 for hypothetical last+1
+                            1.0 - (idx.toDouble() / n.toDouble())
+                        } else null
+                    }
+                    .sum()
+
+                img to score
+            }
+            .sortedWith(
+                compareByDescending<Pair<Image, Double>> { it.second }
+                    .thenBy { it.first.id }
+            )
+            .map { it.first }
+            .toList()
     }
 
     fun deleteImage(id: Long) {

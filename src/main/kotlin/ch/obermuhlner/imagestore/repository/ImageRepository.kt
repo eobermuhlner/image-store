@@ -10,23 +10,22 @@ import org.springframework.stereotype.Repository
 interface ImageRepository : JpaRepository<Image, Long> {
 
     @Query("""
-        SELECT i FROM Image i
-        LEFT JOIN i.tags t
-        WHERE (COALESCE(:requiredTagsSize, 0) = 0 OR
-               (SELECT COUNT(DISTINCT rt.name) FROM Image img
-                JOIN img.tags rt
-                WHERE img.id = i.id AND rt.name IN :requiredTags) = :requiredTagsSize)
-        AND (COALESCE(:optionalTagsSize, 0) = 0 OR t.name IN :optionalTags)
-        AND (COALESCE(:forbiddenTagsSize, 0) = 0 OR i.id NOT IN
-             (SELECT img2.id FROM Image img2 JOIN img2.tags ft WHERE ft.name IN :forbiddenTags))
-        GROUP BY i.id
-        ORDER BY
-            CASE WHEN :optionalTagsSize > 0 THEN
-                (SELECT COUNT(ot.name) FROM Image img3
-                 JOIN img3.tags ot
-                 WHERE img3.id = i.id AND ot.name IN :optionalTags)
-            ELSE 0 END DESC,
-            i.uploadDate DESC
+        SELECT i
+        FROM Image i
+        WHERE
+          ( :requiredTagsSize = 0 OR EXISTS (
+              SELECT 1
+              FROM Image i2
+              JOIN i2.tags r
+              WHERE i2.id = i.id
+                AND r.name IN :requiredTags
+              GROUP BY i2.id
+              HAVING COUNT(DISTINCT r.name) = :requiredTagsSize
+          ))
+        AND
+          ( :forbiddenTagsSize = 0 OR NOT EXISTS (
+              SELECT 1 FROM i.tags f WHERE f.name IN :forbiddenTags
+          ))
     """)
     fun searchByTags(
         @Param("requiredTags") requiredTags: List<String>,

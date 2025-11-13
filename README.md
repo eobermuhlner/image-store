@@ -397,7 +397,8 @@ docker run -p 8080:8080 image-store
 # Run with environment variables for configuration
 docker run -p 8080:8080 \
   -e IMAGESTORE_STORAGE_TYPE=filesystem \
-  -e IMAGESTORE_STORAGE_FILESYSTEM_BASE-PATH=/data/images \
+  -e IMAGESTORE_STORAGE_FILESYSTEM_BASE_PATH=/data/images \
+  -v /path/on/host/data:/data \
   image-store
 ```
 
