@@ -127,7 +127,7 @@ GET {{baseUrl}}/api/images/search?required=parrot
 ###
 
 ### 8. Search Images - Optional Tags
-GET {{baseUrl}}/api/images/search?required=beach
+GET {{baseUrl}}/api/images/search?optional=nature,landscape,sunset
 
 ###
 

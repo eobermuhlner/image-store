@@ -31,7 +31,7 @@ data class Image(
     @Column(nullable = true)
     val uploadedByApiKeyId: Long? = null,
 
-    @ManyToMany(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST, CascadeType.MERGE])
+    @ManyToMany(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinTable(
         name = "image_tags",
         joinColumns = [JoinColumn(name = "image_id")],
