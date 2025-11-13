@@ -13,8 +13,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.transaction.annotation.Transactional
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc(addFilters = false)
 @Transactional
 @TestPropertySource(properties = ["imagestore.security.enabled=false"])

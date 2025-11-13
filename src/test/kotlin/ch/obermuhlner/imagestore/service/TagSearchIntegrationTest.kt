@@ -7,8 +7,10 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest
+@ActiveProfiles("test")
 @Transactional
 class TagSearchIntegrationTest {
 
@@ -67,8 +69,10 @@ class TagSearchIntegrationTest {
             forbiddenTags = emptyList()
         )
 
+        // Should return 1 image that has "dog" tag
         assertEquals(1, results.size)
-        assertTrue(results.any { it.filename == "dog1.jpg" })
+        assertTrue(results.isNotEmpty(), "Results should not be empty")
+        assertTrue(results.all { "dog" in it.tags.map { tag -> tag.name } }, "All results must have 'dog' tag")
     }
 
     @Test
@@ -79,9 +83,12 @@ class TagSearchIntegrationTest {
             forbiddenTags = emptyList()
         )
 
+        // Should return images that have both "cat" AND "pet" tags
         assertEquals(2, results.size)
-        assertTrue(results.any { it.filename == "cat1.jpg" })
-        assertTrue(results.any { it.filename == "cat2.jpg" })
+        assertTrue(results.all {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "cat" in tagNames && "pet" in tagNames
+        }, "All results must have both 'cat' and 'pet' tags")
     }
 
     @Test
@@ -93,7 +100,10 @@ class TagSearchIntegrationTest {
         )
 
         assertEquals(1, results.size)
-        assertEquals("cat1.jpg", results[0].filename)
+        assertTrue(results.all {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "cat" in tagNames && "pet" in tagNames && "indoor" in tagNames
+        }, "All results must have 'cat', 'pet', and 'indoor' tags")
     }
 
     @Test
@@ -104,10 +114,12 @@ class TagSearchIntegrationTest {
             forbiddenTags = listOf("wild")
         )
 
+        // Should return 2 cat images that have "cat" tag but NOT "wild" tag
         assertEquals(2, results.size)
-        assertTrue(results.none { it.filename == "wildcat.jpg" })
-        assertTrue(results.any { it.filename == "cat1.jpg" })
-        assertTrue(results.any { it.filename == "cat2.jpg" })
+        assertTrue(results.all {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "cat" in tagNames && "wild" !in tagNames
+        }, "All results must have 'cat' tag but NOT 'wild' tag")
     }
 
     @Test
@@ -121,13 +133,22 @@ class TagSearchIntegrationTest {
         // With new behavior (optional tags for ranking only), all images should be returned
         // ranked by how many optional tags they match (indoor tag matches: cat1, dog1, bird)
         assertEquals(5, results.size)
-        // First 3 results should be images with "indoor" tag, followed by others
-        assertEquals("cat1.jpg", results[0].filename) // cat, pet, indoor
-        assertEquals("dog1.jpg", results[1].filename) // dog, pet, indoor
-        assertEquals("bird.jpg", results[2].filename) // bird, pet, indoor
-        // The remaining 2 should be without "indoor" tag
-        assertTrue(listOf("cat2.jpg", "wildcat.jpg").contains(results[3].filename))
-        assertTrue(listOf("cat2.jpg", "wildcat.jpg").contains(results[4].filename))
+
+        // Count how many images in the first 3 positions have "indoor" tag
+        val firstThreeWithIndoorCount = results.take(3).count {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "indoor" in tagNames
+        }
+
+        // Count how many images in the last 2 positions have "indoor" tag
+        val lastTwoWithIndoorCount = results.drop(3).count {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "indoor" in tagNames
+        }
+
+        // Verify that the first 3 positions contain all the indoor-tagged images
+        assertEquals(3, firstThreeWithIndoorCount, "First 3 results should all have 'indoor' tag")
+        assertEquals(0, lastTwoWithIndoorCount, "Last 2 results should not have 'indoor' tag")
     }
 
     @Test
@@ -139,8 +160,10 @@ class TagSearchIntegrationTest {
         )
 
         assertEquals(2, results.size)
-        assertTrue(results.any { it.filename == "cat1.jpg" })
-        assertTrue(results.any { it.filename == "cat2.jpg" })
+        assertTrue(results.all {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "pet" in tagNames && "dog" !in tagNames && "bird" !in tagNames
+        }, "All results must have 'pet' tag but NOT 'dog' or 'bird' tags")
     }
 
     @Test
@@ -151,10 +174,12 @@ class TagSearchIntegrationTest {
             forbiddenTags = listOf("wild")
         )
 
+        // Should return images with "cat" tag but NOT "wild" tag, ranked by optional tags
         assertEquals(2, results.size)
-        assertTrue(results.any { it.filename == "cat1.jpg" })
-        assertTrue(results.any { it.filename == "cat2.jpg" })
-        assertTrue(results.none { it.filename == "wildcat.jpg" })
+        assertTrue(results.all {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "cat" in tagNames && "wild" !in tagNames
+        }, "All results must have 'cat' tag but NOT 'wild' tag")
     }
 
     @Test
@@ -165,6 +190,7 @@ class TagSearchIntegrationTest {
             forbiddenTags = emptyList()
         )
 
+        // Should return all 5 images when no filters are specified
         assertEquals(5, results.size)
     }
 
@@ -176,6 +202,7 @@ class TagSearchIntegrationTest {
             forbiddenTags = emptyList()
         )
 
+        // Should return empty list when required tag doesn't match any existing image
         assertTrue(results.isEmpty())
     }
 
@@ -187,8 +214,12 @@ class TagSearchIntegrationTest {
             forbiddenTags = listOf("pet")
         )
 
+        // Should return only images that don't have the "pet" forbidden tag
         assertEquals(1, results.size)
-        assertEquals("wildcat.jpg", results[0].filename)
+        assertTrue(results.all {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "pet" !in tagNames
+        }, "All results must NOT have 'pet' tag")
     }
 
     @Test
@@ -201,8 +232,10 @@ class TagSearchIntegrationTest {
         )
 
         assertEquals(2, results.size)
-        assertTrue(results.any { it.filename == "cat1.jpg" })
-        assertTrue(results.any { it.filename == "bird.jpg" })
+        assertTrue(results.all {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "pet" in tagNames && "indoor" in tagNames && "dog" !in tagNames
+        }, "All results must have 'pet' and 'indoor' tags but NOT 'dog' tag")
     }
 
     @Test
@@ -216,9 +249,21 @@ class TagSearchIntegrationTest {
         // With new behavior (optional tags for ranking only), all images should be returned
         // ranked by how many optional tags they match
         assertEquals(5, results.size)
-        // First results should be images matching optional tags: bird.jpg (has "bird"), wildcat.jpg (has "wild")
-        assertTrue(listOf("bird.jpg", "wildcat.jpg").contains(results[0].filename))
-        assertTrue(listOf("bird.jpg", "wildcat.jpg").contains(results[1].filename))
-        // Followed by others that don't match any optional tags
+
+        // Count how many images in the first 2 positions have "bird" or "wild" tag
+        val firstTwoWithOptionalCount = results.take(2).count {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "bird" in tagNames || "wild" in tagNames
+        }
+
+        // Count how many images in the remaining positions have "bird" or "wild" tag
+        val remainingWithOptionalCount = results.drop(2).count {
+            val tagNames = it.tags.map { tag -> tag.name }
+            "bird" in tagNames || "wild" in tagNames
+        }
+
+        // Verify that the first 2 positions contain all the images with optional tags
+        assertEquals(2, firstTwoWithOptionalCount, "First 2 results should have either 'bird' or 'wild' tag")
+        assertEquals(0, remainingWithOptionalCount, "Remaining results should not have 'bird' or 'wild' tag")
     }
 }

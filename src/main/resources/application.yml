@@ -2,14 +2,15 @@ spring:
   application:
     name: image-store
 
+  profiles:
+    active: dev
+    group:
+      prod: prod,h2-file
+      dev: dev,h2-file
+      test: test,h2-mem
+
   main:
     allow-bean-definition-overriding: true
-
-  datasource:
-    url: jdbc:h2:file:./data/imagestore
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
 
   jpa:
     hibernate:
