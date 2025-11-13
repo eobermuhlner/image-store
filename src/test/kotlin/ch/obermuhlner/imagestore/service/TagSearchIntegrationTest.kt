@@ -118,10 +118,16 @@ class TagSearchIntegrationTest {
             forbiddenTags = emptyList()
         )
 
-        assertEquals(3, results.size)
-        assertTrue(results.any { it.filename == "cat1.jpg" })
-        assertTrue(results.any { it.filename == "dog1.jpg" })
-        assertTrue(results.any { it.filename == "bird.jpg" })
+        // With new behavior (optional tags for ranking only), all images should be returned
+        // ranked by how many optional tags they match (indoor tag matches: cat1, dog1, bird)
+        assertEquals(5, results.size)
+        // First 3 results should be images with "indoor" tag, followed by others
+        assertEquals("cat1.jpg", results[0].filename) // cat, pet, indoor
+        assertEquals("dog1.jpg", results[1].filename) // dog, pet, indoor
+        assertEquals("bird.jpg", results[2].filename) // bird, pet, indoor
+        // The remaining 2 should be without "indoor" tag
+        assertTrue(listOf("cat2.jpg", "wildcat.jpg").contains(results[3].filename))
+        assertTrue(listOf("cat2.jpg", "wildcat.jpg").contains(results[4].filename))
     }
 
     @Test
@@ -207,8 +213,12 @@ class TagSearchIntegrationTest {
             forbiddenTags = emptyList()
         )
 
-        assertEquals(2, results.size)
-        assertTrue(results.any { it.filename == "bird.jpg" })
-        assertTrue(results.any { it.filename == "wildcat.jpg" })
+        // With new behavior (optional tags for ranking only), all images should be returned
+        // ranked by how many optional tags they match
+        assertEquals(5, results.size)
+        // First results should be images matching optional tags: bird.jpg (has "bird"), wildcat.jpg (has "wild")
+        assertTrue(listOf("bird.jpg", "wildcat.jpg").contains(results[0].filename))
+        assertTrue(listOf("bird.jpg", "wildcat.jpg").contains(results[1].filename))
+        // Followed by others that don't match any optional tags
     }
 }

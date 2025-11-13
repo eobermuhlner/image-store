@@ -289,9 +289,9 @@ curl "http://localhost:8080/api/images/search?required=nature,landscape&optional
 ```
 
 **Tag Search Logic:**
-- `required`: Images must have ALL these tags (AND)
-- `optional`: Images should have ANY of these tags (OR)
-- `forbidden`: Images must NOT have ANY of these tags (NOT)
+- `required`: Images must have ALL these tags (AND) - used for filtering
+- `optional`: Images matching more of these tags rank higher (OR) - used for ranking only, not filtering
+- `forbidden`: Images must NOT have ANY of these tags (NOT) - used for filtering
 
 **Note:** Tags are automatically normalized to lowercase, making searches case-insensitive (e.g., "Nature", "NATURE", and "nature" are all equivalent).
 

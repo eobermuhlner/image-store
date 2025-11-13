@@ -19,7 +19,7 @@ The project includes automated CI/CD pipelines using GitHub Actions:
 
 **Domain Model**:
 - `Image` entity with many-to-many relationship to `Tag`
-- Tag-based search with AND/OR/NOT logic using JPQL
+- Tag-based search with AND/OR/NOT logic using JPQL (required/forbidden tags for filtering, optional tags for ranking)
 - Tags are automatically normalized to lowercase for case-insensitive storage and search
 - Search results are sorted by relevance (number of matching optional tags) then by upload date (newest first)
 

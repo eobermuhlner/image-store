@@ -16,7 +16,6 @@ interface ImageRepository : JpaRepository<Image, Long> {
                (SELECT COUNT(DISTINCT rt.name) FROM Image img
                 JOIN img.tags rt
                 WHERE img.id = i.id AND rt.name IN :requiredTags) = :requiredTagsSize)
-        AND (COALESCE(:optionalTagsSize, 0) = 0 OR t.name IN :optionalTags)
         AND (COALESCE(:forbiddenTagsSize, 0) = 0 OR i.id NOT IN
              (SELECT img2.id FROM Image img2 JOIN img2.tags ft WHERE ft.name IN :forbiddenTags))
         GROUP BY i.id

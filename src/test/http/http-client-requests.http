@@ -3,6 +3,11 @@
 ### Note: Tags are automatically normalized to lowercase for case-insensitive storage and search.
 ### For example, "Nature", "NATURE", and "nature" are all stored as "nature".
 ###
+### Search logic:
+### - Required tags: Images must have ALL these tags (used for filtering)
+### - Optional tags: Images matching more of these tags rank higher (used for ranking only, not filtering)
+### - Forbidden tags: Images must NOT have ANY of these tags (used for filtering)
+###
 ### Search results are sorted by relevance (number of matching optional tags), then by upload date (newest first).
 
 ### OpenAPI Documentation
