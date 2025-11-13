@@ -385,11 +385,17 @@ The project includes automated CI/CD pipelines using GitHub Actions:
 
 ### Building and Running with Docker
 
-The application can be built and run using Docker:
+The application can be built and run using Docker. The Docker image uses a multi-stage build process for optimized size and security.
 
 ```bash
 # Build the Docker image
 docker build -t image-store .
+
+# Build with build arguments (optional - for metadata)
+docker build -t image-store \
+  --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+  --build-arg VCS_REF=$(git rev-parse --short HEAD) \
+  --build-arg VERSION=$(git describe --tags --always) .
 
 # Run the application in Docker
 docker run -p 8080:8080 image-store
@@ -399,7 +405,47 @@ docker run -p 8080:8080 \
   -e IMAGESTORE_STORAGE_TYPE=filesystem \
   -e IMAGESTORE_STORAGE_FILESYSTEM_BASE-PATH=/data/images \
   image-store
+
+# Run with volume mount for persistent data (when using filesystem storage)
+docker run -p 8080:8080 \
+  -v imagestore-data:/data/images \
+  -e IMAGESTORE_STORAGE_TYPE=filesystem \
+  -e IMAGESTORE_STORAGE_FILESYSTEM_BASE-PATH=/data/images \
+  image-store
+
+# Run with external database
+docker run -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host:port/database \
+  -e SPRING_DATASOURCE_USERNAME=username \
+  -e SPRING_DATASOURCE_PASSWORD=password \
+  image-store
+
+# Build and run with Docker Compose (if you create a docker-compose.yml)
+docker-compose up --build
 ```
+
+#### Docker Image Metadata
+
+The Docker image includes OpenContainers metadata labels for better traceability:
+
+- `org.opencontainers.image.created`: Build timestamp
+- `org.opencontainers.image.revision`: VCS commit hash
+- `org.opencontainers.image.version`: Application version
+- `org.opencontainers.image.title`: "Image Store"
+- `org.opencontainers.image.description`: Service description
+- `org.opencontainers.image.vendor`: Image Store project
+
+#### Container Configuration
+
+The containerized application runs with these security and performance features:
+
+- Runs as a non-root system user for enhanced security
+- JVM is configured for container environments with automatic memory limits
+- Health check endpoint at `/api/health` for container orchestration
+- Proper init process support
+
+For production deployments, consider using container orchestration platforms like Kubernetes or Docker Swarm.
 
 ### Adding a New Storage Backend
 
