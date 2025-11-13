@@ -1,33 +1,34 @@
-name: Docker Build and Push
+name: Docker Build
+
+permissions:
+  contents: read
+  packages: write
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Docker image tag'
+      environment:
+        description: 'Target environment'
         required: true
-        default: 'latest'
-        type: string
-      push:
-        description: 'Push image to registry'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      push_images:
+        description: 'Push images to registry'
         required: true
         type: boolean
-        default: true
+        default: false
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/image-store
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Image
+  build:
+    name: Build Docker Image
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout code
@@ -36,54 +37,36 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=tag
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
-            type=sha,prefix=
-
-      - name: Log in to Container Registry
-        if: ${{ inputs.push == true || github.event_name == 'push' }}
+      - name: Log in to GitHub Container Registry
+        if: ${{ inputs.push_images }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ inputs.environment }}
+            type=raw,value=latest,enable=${{ inputs.environment == 'production' }}
+            type=sha,prefix=${{ inputs.environment }}-
+
+      - name: Build and push image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: ${{ inputs.push == true || github.event_name == 'push' }}
+          push: ${{ inputs.push_images }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            JAR_FILE=build/libs/image-store-*.jar
-
-  summary:
-    name: Build Summary
-    runs-on: ubuntu-latest
-    needs: [build-and-push]
-    if: always()
-
-    steps:
-      - name: Summary
-        run: |
-          echo "### Docker Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build Result**: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ needs.build-and-push.result }}" = "success" ]; then
-            echo "#### Image Built Successfully" >> $GITHUB_STEP_SUMMARY
-            echo "Image: `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}`" >> $GITHUB_STEP_SUMMARY
-          fi
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ inputs.environment }}
